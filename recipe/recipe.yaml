@@ -1,0 +1,193 @@
+context:
+  version: 2.28
+  kernel_headers_version: 5.12.0
+  build_number: 2
+  ctng_vendor: conda
+  target_machine: x86_64
+  sysroot_cdt_name: conda_2_28
+  sysroot_cdt_arch: x86_64
+  cross_target_platform: linux-64
+  centos_machine: x86_64
+  rpm_url: "https://repo.almalinux.org/vault/8.7/BaseOS/${{ centos_machine }}/os/Packages"
+  appstream_rpm_url: "https://repo.almalinux.org/vault/8.7/AppStream/${{ centos_machine }}/os/Packages"
+  powertools_rpm_url: "https://repo.almalinux.org/vault/8.7/PowerTools/${{ centos_machine }}/os/Packages"
+
+recipe:
+  name: linux-sysroot
+  version: ${{ version }}
+
+source:
+  - url: ${{ rpm_url }}/glibc-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: a82cc18a623f63f5e3370188543930fbc44cbb668407c3fe2b89fbb717e07279  # [cross_target_platform == "linux-64"]
+    target_directory: binary
+  - url: ${{ rpm_url }}/glibc-common-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: 56df0fb69b892e18b7287b336460218b938b2016cb8081ad2b0713c18338133f  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-common
+  - url: ${{ rpm_url }}/glibc-devel-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: 378f7e422b1ffbaa176cd1af35f062ff567d4ddb081b572e974964c13601ade8  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-devel
+  - url: ${{ rpm_url }}/glibc-headers-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: 306ecebfd6b1c9d0ccdab28dc79aa2339564bc60d4546920abdb60a3439ae40a  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-headers
+  - url: ${{ powertools_rpm_url }}/glibc-static-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: e177a98714c4415004ad08c4ea68d82e3f83d75dfa007a528abb6ba81287feb1  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-static
+  - url: https://yum.rrva0.facebook.com/yum/fb-runtime/Packages/kernel-headers-5.12.0-0_fbk4_4620_gc9859290c7cd.x86_64.rpm
+    sha256: c9c146375cb4055087badaf42112a695440f3cd26c64895bafa03eaeb91caa2e  # [cross_target_platform == "linux-64"]
+    target_directory: binary-kernel-headers
+  - url: ${{ appstream_rpm_url }}/nss-softokn-freebl-3.79.0-11.el8_7.${{ centos_machine }}.rpm
+    sha256: a85fddc98b0384289a53aced70e318dfd9d146c731fffa965cf624381b1e3165  # [cross_target_platform == "linux-64"]
+    target_directory: binary-freebl
+  - url: https://repo.almalinux.org/vault/8.7/BaseOS/x86_64/os/Packages/tzdata-2023c-1.el8.noarch.rpm
+    sha256: b33647f0a02d09d96fadf9c18ad421931061aaf608e0e7a86e702c9b3f4e3111
+    target_directory: binary-tzdata
+  - url: ${{ rpm_url }}/glibc-all-langpacks-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: c9b9f8b070c8727770848823f88125370e11d3bc97e2d71ee86e46d65b764a5c  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-langpacks
+  - url: ${{ powertools_rpm_url }}/glibc-nss-devel-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: 8196e6a5e3a8c4b6841de581bc2967cc0034e90ee25bc9a86a12f2d278ce129c  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-nss-devel
+  - url: ${{ rpm_url }}/nss_db-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: fb04e1baeb2e971fbef45d87a17aa8ce9254f570908c1ec9a0152f287d4b6b60  # [cross_target_platform == "linux-64"]
+    target_directory: binary-nss_db
+  - url: ${{ rpm_url }}/nss_nis-3.0-8.el8.${{ centos_machine }}.rpm
+    sha256: 092ae0b3db08c0bd8af1187f37abf426af9092495f3276bd186c90679f342e59  # [cross_target_platform == "linux-64"]
+    target_directory: binary-nss_nis
+  - url: ${{ rpm_url }}/glibc-gconv-extra-2.28-211.el8.${{ centos_machine }}.rpm
+    sha256: 674f732211af309d10e2f82c145c809a0db99cc4febe39e08fb33624bf090bcc  # [cross_target_platform == "linux-64"]
+    target_directory: binary-glibc-gconv-extra
+
+build:
+  number: ${{ build_number }}
+  noarch: generic
+  script:
+    env:
+      target_machine: ${{ target_machine }}
+      ctng_vendor: ${{ ctng_vendor }}
+  dynamic_linking:
+    missing_dso_allowlist:
+      - "*"
+
+outputs:
+  - package:
+      name: kernel-headers_${{ cross_target_platform }}
+      version: ${{ kernel_headers_version }}
+    build:
+      script:
+        file: build-kernel-headers.sh
+        env:
+          target_machine: ${{ target_machine }}
+          ctng_vendor: ${{ ctng_vendor }}
+      noarch: generic
+      prefix_detection:
+        ignore_binary_files: false
+      dynamic_linking:
+        binary_relocation: false
+    requirements:
+      build:
+        - rpm-tools
+        - tar
+      run:
+        - _sysroot_${{ cross_target_platform }}_curr_repodata_hack 3.*
+      run_constraints:
+        - sysroot_${{ cross_target_platform }} ==${{ version }}
+    tests:
+      - script: test -f $PREFIX/${{ target_machine }}-${{ ctng_vendor }}-linux-gnu/sysroot/usr/include/linux/version.h
+  - package:
+      name: _sysroot_${{ cross_target_platform }}_curr_repodata_hack
+      version: 3
+    build:
+      noarch: generic
+    tests:
+      - script:
+          - "echo \"works!\""
+  - package:
+      name: sysroot_${{ cross_target_platform }}
+    build:
+      script:
+        file: build-sysroot.sh
+        env:
+          target_machine: ${{ target_machine }}
+          ctng_vendor: ${{ ctng_vendor }}
+      noarch: generic
+      prefix_detection:
+        ignore_binary_files: false
+      dynamic_linking:
+        binary_relocation: false
+      #track_features:
+      #  - sysroot_${{ cross_target_platform }}_${{ version }}
+      #  - sysroot_${{ cross_target_platform }}_${{ version }}_feature_2
+    requirements:
+      build:
+        - rpm-tools
+        - tar
+      run:
+        - _sysroot_${{ cross_target_platform }}_curr_repodata_hack 3.*
+        - ${{ pin_subpackage('kernel-headers_linux-64', exact=True) }}
+      run_exports:
+        strong:
+          - __glibc >=${{ version }},<3.0.a0
+    tests:
+      - script:
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/lib/libc.so.6
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/sbin/ldconfig
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/lib/crt1.o
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/limits.h
+          - if: "cross_target_platform == \"linux-64\""
+            then: test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/gnu/stubs-64.h
+          - if: "cross_target_platform != \"linux-64\""
+            then: test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/gnu/stubs.h
+          - test -d $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/share/locale
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/bin/ldd
+          - test -f $PREFIX/${{ target_machine }}-${{ ctng_vendor }}-linux-gnu/sysroot/lib/libc.so.6
+          - "find \"${PREFIX}\" \\( -name 'libnsl*' -o -path '*/rpcsvc/yp*' \\) | { ! grep . ; }"
+          - "find \"${PREFIX}\" \\( -name 'libcrypt*' -o -name 'crypt.*' \\) | { ! grep . ; }"
+  - package:
+      name: sysroot-${{ sysroot_cdt_name }}-${{ sysroot_cdt_arch }}
+    build:
+      noarch: generic
+    requirements:
+      run:
+        - sysroot_${{ cross_target_platform }} ==${{ version }}
+    tests:
+      - script:
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/lib/libc.so.6
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/sbin/ldconfig
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/lib/crt1.o
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/limits.h
+          - if: "cross_target_platform == \"linux-64\""
+            then: test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/gnu/stubs-64.h
+          - if: "cross_target_platform != \"linux-64\""
+            then: test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/include/gnu/stubs.h
+          - test -d $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/share/locale
+          - test -f $PREFIX/${{ target_machine }}-conda-linux-gnu/sysroot/usr/bin/ldd
+          - test -f $PREFIX/${{ target_machine }}-${{ ctng_vendor }}-linux-gnu/sysroot/lib/libc.so.6
+          - "find \"${PREFIX}\" \\( -name 'libnsl*' -o -path '*/rpcsvc/yp*' \\) | { ! grep . ; }"
+          - "find \"${PREFIX}\" \\( -name 'libcrypt*' -o -name 'crypt.*' \\) | { ! grep . ; }"
+
+about:
+  #license: LGPL-2.0-or-later AND LGPL-2.0-or-later WITH exceptions AND GPL-2.0-or-later AND MPL-2.0
+  license_file: nss-license
+  # other license files are packaged with source
+  summary: (CDT) The GNU libc libraries and header files for the Linux kernel for use by glibc
+  description: |
+    The glibc package contains standard libraries which are used by multiple
+    programs on the system. In order to save disk space and memory, as well as to
+    make upgrading easier, common system code is kept in one place and shared
+    between programs. This particular package contains the most important sets of
+    shared libraries: the standard C library and the standard math library.
+    Without these two libraries, a Linux system will not function.
+
+    Kernel-headers includes the C header files that specify the interface between
+    the Linux kernel and userspace libraries and programs.  The header files
+    define structures and constants that are needed for building most standard
+    programs and are also needed for rebuilding the glibc package.
+
+
+  homepage: http://sources.redhat.com/glibc/
+
+extra:
+  recipe-maintainers:
+    - isuruf
+    - scopatz
+    - beckermr

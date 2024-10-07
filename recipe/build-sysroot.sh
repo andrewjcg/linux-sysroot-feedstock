@@ -1,5 +1,8 @@
 #!/bin/bash
 
+find "$SRC_DIR" -name "*.rpm" -type f \
+  | xargs -i -P $(nproc) -n 1 sh -c 'cat {} | rpm2archive - | tar -xvz --show-transformed-names --transform="s|usr/||" -C "$(dirname {})"'
+
 mkdir -p ${PREFIX}/${target_machine}-${ctng_vendor}-linux-gnu/sysroot
 pushd ${PREFIX}/${target_machine}-${ctng_vendor}-linux-gnu/sysroot > /dev/null 2>&1
 cp -Rf "${SRC_DIR}"/binary/* .
@@ -23,7 +26,9 @@ rm -rf usr/lib
 ln -s $PWD/usr/lib64 $PWD/usr/lib
 
 if [ -d "lib" ]; then
-    mv lib/* lib64/
+    if [ ! -z "$(ls "lib")" ]; then
+      mv lib/* lib64/
+    fi
     rm -rf lib
 fi
 ln -s $PWD/lib64 $PWD/lib
